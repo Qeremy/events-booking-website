@@ -5,7 +5,7 @@ import { formatDate, formatTime, formatPrice } from '@/lib/utils'
 import { Event, TicketType } from '@/lib/types'
 
 interface EventPageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 interface EventData {
@@ -18,17 +18,25 @@ export default function EventPage({ params }: EventPageProps) {
   const [loading, setLoading] = useState(true)
   const [bookingLoading, setBookingLoading] = useState(false)
   const [quantities, setQuantities] = useState<Record<string, number>>({})
+  const [eventId, setEventId] = useState<string>('')
 
   // Fetch event data on component mount
   useEffect(() => {
-    fetch(`/api/events/${params.id}`)
-      .then(res => res.json())
-      .then(data => {
-        setEventData(data)
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
-  }, [params.id])
+    const fetchData = async () => {
+      const { id } = await params
+      setEventId(id)
+      
+      fetch(`/api/events/${id}`)
+        .then(res => res.json())
+        .then(data => {
+          setEventData(data)
+          setLoading(false)
+        })
+        .catch(() => setLoading(false))
+    }
+    
+    fetchData()
+  }, [params])
 
   const handleQuantityChange = (ticketId: string, qty: number) => {
     setQuantities(prev => ({
@@ -52,7 +60,7 @@ export default function EventPage({ params }: EventPageProps) {
       const res = await fetch('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId: params.id, items, userId: null })
+        body: JSON.stringify({ eventId, items, userId: null })
       })
       const { checkoutUrl } = await res.json()
       window.location.href = checkoutUrl
